@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  SHIPPED
+  DELIVERED
+  RETURNED
+  NRP
+  INJ
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  TEMPLATE
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ReminderType {
+  NRP
+  INJ
+}
+
+enum TrackingStatus {
+  CREATED
+  PICKED_UP
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  NO_ANSWER
+  RETURNED
+  FAILED
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  shopifyId        String      @unique
+  shopifyOrderName String
+  customerName     String
+  customerPhone    String
+  customerCity     String?
+  productTitle     String
+  productVariant   String?
+  productSku       String?
+  totalPrice       Float
+  currency         String      @default("MAD")
+  status           OrderStatus @default(PENDING)
+  sheetRowIndex    Int?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  messages  WhatsappMessage[]
+  reminders Reminder[]
+  tracking  Tracking?
+
+  @@index([customerPhone])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  shopifyId   String?  @unique
+  title       String
+  sku         String?  @unique
+  imageUrl    String?
+  audioUrl    String?
+  description String?
+  faq         Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WhatsappMessage {
+  id          String           @id @default(cuid())
+  orderId     String?
+  direction   MessageDirection
+  from        String
+  to          String
+  type        MessageType      @default(TEXT)
+  body        String?
+  mediaUrl    String?
+  waMessageId String?          @unique
+  status      String           @default("PENDING")
+  scheduledAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([orderId])
+  @@index([to])
+}
+
+model Reminder {
+  id          String         @id @default(cuid())
+  orderId     String
+  type        ReminderType
+  attempt     Int
+  scheduledAt DateTime
+  sentAt      DateTime?
+  status      ReminderStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([orderId])
+}
+
+model Tracking {
+  id             String         @id @default(cuid())
+  orderId        String         @unique
+  trackingNumber String
+  carrier        String         @default("OzonExpress")
+  currentStatus  TrackingStatus @default(CREATED)
+  lastCheckedAt  DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  order  Order           @relation(fields: [orderId], references: [id])
+  events TrackingEvent[]
+
+  @@index([trackingNumber])
+  @@index([currentStatus])
+}
+
+model TrackingEvent {
+  id          String         @id @default(cuid())
+  trackingId  String
+  status      TrackingStatus
+  description String?
+  location    String?
+  occurredAt  DateTime
+  notified    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+
+  tracking Tracking @relation(fields: [trackingId], references: [id])
+
+  @@index([trackingId])
+  @@index([notified])
+}
+
+model SheetSync {
+  id          String   @id @default(cuid())
+  lastSyncAt  DateTime
+  rowsUpdated Int      @default(0)
+  errors      Json?
+  createdAt   DateTime @default(now())
+}

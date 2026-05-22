@@ -1,0 +1,7 @@
+# Normalize line endings for cross-platform compatibility
+* text=auto eol=lf
+
+# Binaries — no conversion
+*.png binary
+*.jpg binary
+*.ico binary
