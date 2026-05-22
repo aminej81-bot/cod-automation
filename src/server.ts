@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env'; // must be first — loads .env before any other module reads process.env
 import http from 'http';
 import app from './app';
 import { config } from './config';
