@@ -1,0 +1,18 @@
+# Nixpacks build configuration for Railway
+# https://nixpacks.com/docs/configuration/file
+
+[phases.setup]
+# Pin Node.js 20. Nixpacks also respects engines.node in package.json.
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+# Generate the Prisma client before compiling TypeScript.
+# prisma generate must run first so @prisma/client types resolve correctly.
+cmds = ["npx prisma generate", "npm run build"]
+
+[start]
+# Procfile takes precedence on Railway; this is the Nixpacks fallback.
+cmd = "npx prisma db push && node dist/server.js"
