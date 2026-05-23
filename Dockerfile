@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# openssl is required by Prisma's query engine at generate-time
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
@@ -21,8 +24,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV TZ=Africa/Casablanca
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init tzdata
+# openssl  — Prisma query engine + `prisma db push` link against libssl at runtime
+# dumb-init — correct PID 1 signal handling
+# tzdata    — Africa/Casablanca timezone data
+RUN apk add --no-cache openssl dumb-init tzdata
 
 COPY package*.json ./
 RUN npm ci --omit=dev
